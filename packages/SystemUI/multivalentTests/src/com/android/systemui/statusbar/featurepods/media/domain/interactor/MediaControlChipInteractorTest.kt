@@ -33,6 +33,7 @@ import com.android.systemui.media.remedia.data.repository.mediaRepository
 import com.android.systemui.media.remedia.shared.flag.MediaControlsInComposeFlag
 import com.android.systemui.testKosmos
 import com.google.common.truth.Truth.assertThat
+import lineageos.providers.LineageSettings
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,6 +62,11 @@ class MediaControlChipInteractorTest(flags: FlagsParameterization) : SysuiTestCa
 
     @Before
     fun setUp() {
+        LineageSettings.System.putInt(
+            mContext.contentResolver,
+            LineageSettings.System.STATUS_BAR_SHOW_MUSIC_TICKER,
+            1
+        )
         kosmos.underTest.initialize()
         MockitoAnnotations.initMocks(this)
     }

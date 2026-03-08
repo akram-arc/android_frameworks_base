@@ -87,6 +87,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -200,6 +201,8 @@ fun Media(
         modifier = modifier,
     )
 }
+
+val LocalDisableSquiggle = staticCompositionLocalOf { false }
 
 /**
  * Renders a media controls carousel of cards.
@@ -884,7 +887,7 @@ private fun ContentScope.Navigation(
                             track = { sliderState ->
                                 SeekBarTrack(
                                     sliderState = sliderState,
-                                    isSquiggly = viewModel.isSquiggly,
+                                    isSquiggly = viewModel.isSquiggly && !LocalDisableSquiggle.current,
                                     colors = colors,
                                     modifier = Modifier.fillMaxWidth(),
                                 )

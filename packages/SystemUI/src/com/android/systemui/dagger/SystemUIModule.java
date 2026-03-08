@@ -141,6 +141,7 @@ import com.android.systemui.statusbar.domain.interactor.StatusBarRegionSamplingI
 import com.android.systemui.statusbar.events.StatusBarEventsModule;
 import com.android.systemui.statusbar.events.SystemStatusAnimationScheduler;
 import com.android.systemui.statusbar.featurepods.av.AvControlsChipModule;
+import com.android.systemui.statusbar.featurepods.media.MediaControlChipModule;
 import com.android.systemui.statusbar.notification.NotifPipelineFlags;
 import com.android.systemui.statusbar.notification.collection.NotifPipeline;
 import com.android.systemui.statusbar.notification.collection.inflation.NotificationRowBinder;
@@ -227,6 +228,7 @@ import javax.inject.Named;
         AssistModule.class,
         AuthenticationModule.class,
         AvControlsChipModule.class,
+        MediaControlChipModule.class,
         BiometricsModule.class,
         BiometricsDomainLayerModule.class,
         BouncerInteractorModule.class,
