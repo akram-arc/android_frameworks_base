@@ -51,6 +51,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -522,7 +523,7 @@ private fun ContentScope.CardForegroundContent(
             )
     ) {
         // Always add the first/top row, regardless of presentation style.
-        Box(modifier = Modifier.fillMaxWidth()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             // Icon.
             Icon(
                 icon = viewModel.icon,
@@ -534,26 +535,10 @@ private fun ContentScope.CardForegroundContent(
                         .clip(CircleShape),
             )
 
-            var cardMaxWidth: Int by remember { mutableIntStateOf(0) }
+            val cardMaxWidth = constraints.maxWidth
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier =
-                    Modifier.align(Alignment.TopEnd)
-                        // Output switcher chip must be limited to at most 40% of the maximum
-                        // width of the card.
-                        //
-                        // This saves the maximum possible width of the card so it can be
-                        // referred to by child custom layout code below.
-                        //
-                        // The assumption is that the row can be as wide as the entire card.
-                        .layout { measurable, constraints ->
-                            cardMaxWidth = constraints.maxWidth
-                            val placeable = measurable.measure(constraints)
-
-                            layout(placeable.measuredWidth, placeable.measuredHeight) {
-                                placeable.place(0, 0)
-                            }
-                        },
+                modifier = Modifier.align(Alignment.TopEnd),
             ) {
                 AnimatedVisibility(
                     visible = viewModel.deviceSuggestionChip != null,
