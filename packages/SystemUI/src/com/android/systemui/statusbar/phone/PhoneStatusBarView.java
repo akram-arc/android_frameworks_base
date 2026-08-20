@@ -19,9 +19,14 @@ package com.android.systemui.statusbar.phone;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.database.ContentObserver;
 import android.graphics.Insets;
 import android.graphics.Rect;
 import android.graphics.Region;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.UserHandle;
+import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Display;
@@ -132,17 +137,45 @@ public class PhoneStatusBarView extends FrameLayout {
         updateResources();
     }
 
+    private ContentObserver mPaddingObserver;
+
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
+        if (mPaddingObserver == null) {
+            mPaddingObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    updatePaddings();
+                    requestLayout();
+                }
+            };
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.System.getUriFor("status_bar_padding_left"),
+                    false, mPaddingObserver, UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.System.getUriFor("status_bar_padding_right"),
+                    false, mPaddingObserver, UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.System.getUriFor("status_bar_padding_top"),
+                    false, mPaddingObserver, UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.System.getUriFor("status_bar_padding_bottom"),
+                    false, mPaddingObserver, UserHandle.USER_ALL);
+        }
         if (updateDisplayParameters()) {
             updateLayoutForCutout();
             updateWindowHeight();
         }
+        updatePaddings();
     }
 
     @Override
     protected void onDetachedFromWindow() {
+        if (mPaddingObserver != null) {
+            mContext.getContentResolver().unregisterContentObserver(mPaddingObserver);
+            mPaddingObserver = null;
+        }
         super.onDetachedFromWindow();
         mDisplayCutout = null;
     }
@@ -332,14 +365,45 @@ public class PhoneStatusBarView extends FrameLayout {
     }
 
     private void updatePaddings() {
-        int statusBarPaddingStart = getResources().getDimensionPixelSize(
+        int defaultPaddingStart = getResources().getDimensionPixelSize(
                 R.dimen.status_bar_padding_start);
+        int defaultPaddingEnd = getResources().getDimensionPixelSize(
+                R.dimen.status_bar_padding_end);
+        int defaultPaddingTop = getResources().getDimensionPixelSize(
+                R.dimen.status_bar_padding_top);
+
+        int customLeft = Settings.System.getIntForUser(
+                mContext.getContentResolver(),
+                "status_bar_padding_left",
+                0,
+                UserHandle.USER_CURRENT);
+        int customRight = Settings.System.getIntForUser(
+                mContext.getContentResolver(),
+                "status_bar_padding_right",
+                0,
+                UserHandle.USER_CURRENT);
+        int customTop = Settings.System.getIntForUser(
+                mContext.getContentResolver(),
+                "status_bar_padding_top",
+                0,
+                UserHandle.USER_CURRENT);
+        int customBottom = Settings.System.getIntForUser(
+                mContext.getContentResolver(),
+                "status_bar_padding_bottom",
+                0,
+                UserHandle.USER_CURRENT);
+
+        float density = getResources().getDisplayMetrics().density;
+        int statusBarPaddingStart = Math.max(0, defaultPaddingStart + Math.round(customLeft * density));
+        int statusBarPaddingEnd = Math.max(0, defaultPaddingEnd + Math.round(customRight * density));
+        int statusBarPaddingTop = Math.max(0, defaultPaddingTop + Math.round(customTop * density));
+        int statusBarPaddingBottom = Math.max(0, Math.round(customBottom * density));
 
         findViewById(R.id.status_bar_contents).setPaddingRelative(
                 statusBarPaddingStart,
-                getResources().getDimensionPixelSize(R.dimen.status_bar_padding_top),
-                getResources().getDimensionPixelSize(R.dimen.status_bar_padding_end),
-                0);
+                statusBarPaddingTop,
+                statusBarPaddingEnd,
+                statusBarPaddingBottom);
 
         findViewById(R.id.notification_lights_out)
                 .setPaddingRelative(0, statusBarPaddingStart, 0, 0);
@@ -358,6 +422,43 @@ public class PhoneStatusBarView extends FrameLayout {
         updateSafeInsets();
     }
 
+    private boolean mDynamicIslandActive = false;
+    private int mDynamicIslandWidth = 0;
+
+    public void setDynamicIslandActive(boolean active, int widthPx) {
+        if (mDynamicIslandActive != active || mDynamicIslandWidth != widthPx) {
+            mDynamicIslandActive = active;
+            mDynamicIslandWidth = widthPx;
+            updateCutoutLocation();
+            updateIconsScaleForDynamicIsland();
+            requestLayout();
+        }
+    }
+
+    private void updateIconsScaleForDynamicIsland() {
+        float targetScale = mDynamicIslandActive ? 0.88f : 1.0f;
+        View startSide = findViewById(R.id.status_bar_start_side_container);
+        if (startSide != null) {
+            startSide.setPivotX(0f);
+            startSide.setPivotY(startSide.getHeight() / 2f);
+            startSide.animate()
+                    .scaleX(targetScale)
+                    .scaleY(targetScale)
+                    .setDuration(200)
+                    .start();
+        }
+        View endSide = findViewById(R.id.status_bar_end_side_content);
+        if (endSide != null) {
+            endSide.setPivotX(endSide.getWidth());
+            endSide.setPivotY(endSide.getHeight() / 2f);
+            endSide.animate()
+                    .scaleX(targetScale)
+                    .scaleY(targetScale)
+                    .setDuration(200)
+                    .start();
+        }
+    }
+
     private void updateCutoutLocation() {
         // Not all layouts have a cutout (e.g., Car)
         if (mCutoutSpace == null) {
@@ -372,7 +473,13 @@ public class PhoneStatusBarView extends FrameLayout {
             hasCornerCutout = true;
         }
 
-        if (mDisplayCutout == null || mDisplayCutout.isEmpty() || hasCornerCutout) {
+        int minWidth = 0;
+        if (mDynamicIslandActive) {
+            float density = getResources().getDisplayMetrics().density;
+            minWidth = mDynamicIslandWidth > 0 ? mDynamicIslandWidth : Math.round(160 * density);
+        }
+
+        if ((mDisplayCutout == null || mDisplayCutout.isEmpty() || hasCornerCutout) && !mDynamicIslandActive) {
             mCutoutSpace.setVisibility(View.GONE);
             return;
         }
@@ -380,12 +487,19 @@ public class PhoneStatusBarView extends FrameLayout {
         mCutoutSpace.setVisibility(View.VISIBLE);
         LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) mCutoutSpace.getLayoutParams();
 
-        Rect bounds = mDisplayCutout.getBoundingRectTop();
+        int cutoutWidth = 0;
+        int cutoutHeight = 0;
+        if (mDisplayCutout != null && !mDisplayCutout.isEmpty() && !hasCornerCutout) {
+            Rect bounds = mDisplayCutout.getBoundingRectTop();
+            bounds.left = bounds.left + mCutoutSideNudge;
+            bounds.right = bounds.right - mCutoutSideNudge;
+            cutoutWidth = bounds.width();
+            cutoutHeight = bounds.height();
+        }
 
-        bounds.left = bounds.left + mCutoutSideNudge;
-        bounds.right = bounds.right - mCutoutSideNudge;
-        lp.width = bounds.width();
-        lp.height = bounds.height();
+        lp.width = Math.max(cutoutWidth, minWidth);
+        lp.height = Math.max(cutoutHeight, ViewGroup.LayoutParams.MATCH_PARENT);
+        mCutoutSpace.setLayoutParams(lp);
     }
 
     private void updateSafeInsets() {

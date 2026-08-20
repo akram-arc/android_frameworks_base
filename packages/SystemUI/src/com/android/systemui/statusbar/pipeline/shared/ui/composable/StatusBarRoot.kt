@@ -318,8 +318,12 @@ fun StatusBarRoot(
                         )
 
                         setContent {
+                            val activeChips = statusBarViewModel.popupChips
+                            androidx.compose.runtime.LaunchedEffect(activeChips.isNotEmpty()) {
+                                phoneStatusBarView.setDynamicIslandActive(activeChips.isNotEmpty(), 0)
+                            }
                             StatusBarDynamicIslandContainer(
-                                chips = statusBarViewModel.popupChips,
+                                chips = activeChips,
                                 onMediaControlPopupVisibilityChanged = { popupShowing ->
                                     mediaHierarchyManager.isMediaControlPopupShowing =
                                         popupShowing
