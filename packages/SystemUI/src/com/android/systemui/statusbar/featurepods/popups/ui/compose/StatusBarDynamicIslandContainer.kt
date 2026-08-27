@@ -120,8 +120,7 @@ fun StatusBarDynamicIslandContainer(
     Box(
         modifier =
             modifier
-                .padding(horizontal = 8.dp)
-                .offset(x = cutoutSpec.horizontalOffset),
+                .padding(horizontal = 8.dp), 
         contentAlignment = Alignment.Center,
     ) {
         AnimatedContent(
