@@ -2101,18 +2101,22 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     }
 
     void showGlobalActionsInternal() {
-        final boolean keyguardShowing = isKeyguardLocked();
-        if (keyguardShowing && isKeyguardSecure(mCurrentUserId) &&
+        final boolean keyguardLocked = isKeyguardLocked();
+        if (keyguardLocked && isKeyguardSecure(mCurrentUserId) &&
                 !mGlobalActionsOnLockEnable) {
             return;
         }
+
         if (mGlobalActions == null) {
             mGlobalActions = mGlobalActionsFactory.get();
         }
+        
+        final boolean keyguardShowing = isKeyguardShowingAndNotOccluded();
         mGlobalActions.showDialog(keyguardShowing, isDeviceProvisioned());
+        
         // since it took two seconds of long press to bring this up,
         // poke the wake lock so they have some time to see the dialog.
-        mPowerManager.userActivity(mInjector.getUptimeMillis(), false);
+        mPowerManager.userActivity(SystemClock.uptimeMillis(), false);
     }
 
     private void cancelGlobalActionsAction() {
