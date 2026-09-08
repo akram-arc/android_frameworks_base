@@ -436,24 +436,23 @@ public class PhoneStatusBarView extends FrameLayout {
     }
 
     private void updateIconsScaleForDynamicIsland() {
-        float targetScale = mDynamicIslandActive ? 0.88f : 1.0f;
         View startSide = findViewById(R.id.status_bar_start_side_container);
-        if (startSide != null) {
+        if (startSide != null && startSide.getScaleX() != 1.0f) {
             startSide.setPivotX(0f);
             startSide.setPivotY(startSide.getHeight() / 2f);
             startSide.animate()
-                    .scaleX(targetScale)
-                    .scaleY(targetScale)
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
                     .setDuration(200)
                     .start();
         }
         View endSide = findViewById(R.id.status_bar_end_side_content);
-        if (endSide != null) {
+        if (endSide != null && endSide.getScaleX() != 1.0f) {
             endSide.setPivotX(endSide.getWidth());
             endSide.setPivotY(endSide.getHeight() / 2f);
             endSide.animate()
-                    .scaleX(targetScale)
-                    .scaleY(targetScale)
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
                     .setDuration(200)
                     .start();
         }
@@ -476,7 +475,7 @@ public class PhoneStatusBarView extends FrameLayout {
         int minWidth = 0;
         if (mDynamicIslandActive) {
             float density = getResources().getDisplayMetrics().density;
-            minWidth = mDynamicIslandWidth > 0 ? mDynamicIslandWidth : Math.round(160 * density);
+            minWidth = mDynamicIslandWidth > 0 ? mDynamicIslandWidth : Math.round(110 * density);
         }
 
         if ((mDisplayCutout == null || mDisplayCutout.isEmpty() || hasCornerCutout) && !mDynamicIslandActive) {

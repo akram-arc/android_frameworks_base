@@ -54,6 +54,7 @@ import kotlin.math.abs
 fun StatusBarDynamicIslandContainer(
     chips: List<PopupChipModel.Shown>,
     onMediaControlPopupVisibilityChanged: (Boolean) -> Unit,
+    onIslandWidthChanged: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val cutoutSpec = rememberDynamicIslandCutoutSpec()
@@ -101,6 +102,12 @@ fun StatusBarDynamicIslandContainer(
         onMediaControlPopupVisibilityChanged(
             chips.any { it.chipId == PopupChipId.MediaControl && it.isPopupShown }
         )
+    }
+
+    LaunchedEffect(selectedChip == null) {
+        if (selectedChip == null) {
+            onIslandWidthChanged(0)
+        }
     }
 
     if (selectedChip == null) {
@@ -159,7 +166,10 @@ fun StatusBarDynamicIslandContainer(
                 viewModel = chip,
                 pageCount = chips.size,
                 cutoutSpec = cutoutSpec,
-                onChipBoundsChanged = { bounds -> anchorBounds = bounds },
+                onChipBoundsChanged = { bounds ->
+                    anchorBounds = bounds
+                    onIslandWidthChanged(bounds.width.toInt())
+                },
                 modifier =
                     Modifier.pointerInput(chips.size, chip.chipId) {
                         detectHorizontalDragGestures(
